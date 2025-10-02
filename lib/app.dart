@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swift_chat/pages/home_page.dart';
-import 'package:swift_chat/pages/login_page.dart';
+import 'package:swift_chat/pages/auth/login_page.dart';
 import 'package:swift_chat/providers/user_provider.dart';
 
 class App extends ConsumerWidget {

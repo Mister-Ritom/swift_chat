@@ -1,12 +1,14 @@
+import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/pages/home_page.dart';
-import 'package:swift_chat/pages/login_page.dart';
-import '../providers/user_provider.dart';
-import '../utils/error_map.dart';
+import 'package:swift_chat/pages/auth/login_page.dart';
+import '../../providers/user_provider.dart';
+import '../../utils/error_map.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -27,6 +29,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _usernameError;
   String? _emailError;
   String? _passwordError;
+
+  List<String> _usernameSuggestions = [];
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
@@ -85,14 +89,49 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         suffixIcon: suffix,
       );
 
-  void _validateUsername(String value) {
-    setState(() {
-      if (value.trim().isEmpty) {
-        _usernameError = "Username is required";
-      } else if (value.trim().length < 3) {
-        _usernameError = "Minimum 3 characters";
-      } else {
-        _usernameError = null;
+  Timer? _debounce;
+
+  /// Validate username with availability check
+  Future<void> _validateUsername(String username) async {
+    // Cancel previous pending check
+    _debounce?.cancel();
+
+    // Start debounce
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final pb = PBClient.instance;
+      final clean = username.trim().toLowerCase();
+
+      try {
+        // Check if username exists
+        await pb.collection('users').getFirstListItem('username="$clean"');
+
+        // Exists → username taken
+        setState(() {
+          _usernameError = "Username already taken";
+          _usernameSuggestions = [];
+
+          // Generate up to 3 dynamic suggestions
+          for (int i = 0, n = 0; n < 3 && i < 50; i++) {
+            final candidate =
+                "$clean${DateTime.now().millisecondsSinceEpoch % 10000 + i}";
+            if (!_usernameSuggestions.contains(candidate)) {
+              _usernameSuggestions.add(candidate);
+              n++;
+            }
+          }
+        });
+      } on ClientException catch (e) {
+        if (e.statusCode == 404) {
+          // Not found → available
+          setState(() {
+            _usernameError = null;
+            _usernameSuggestions = [];
+          });
+        } else {
+          log("Error checking username: $e");
+        }
+      } catch (e) {
+        log("Error checking username: $e");
       }
     });
   }
@@ -157,9 +196,27 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     TextFormField(
                       controller: _usernameController,
                       decoration: _inputDecoration("Username"),
-                      onChanged: _validateUsername,
+                      onChanged: (val) => _validateUsername(val),
                       validator: (_) => _usernameError,
                     ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.2),
+                    if (_usernameSuggestions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children:
+                            _usernameSuggestions
+                                .map(
+                                  (s) => ActionChip(
+                                    label: Text(s),
+                                    onPressed: () {
+                                      _usernameController.text = s;
+                                      _validateUsername(s);
+                                    },
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // Email
