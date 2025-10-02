@@ -1,4 +1,4 @@
-package com.example.swift_chat
+package me.ritom.swift_chat
 
 import io.flutter.embedding.android.FlutterActivity
 
