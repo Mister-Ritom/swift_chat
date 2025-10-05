@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/user_provider.dart';
-import '../../utils/error_map.dart';
+import '../../utils/mapping.dart';
 import 'register_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {

@@ -8,7 +8,7 @@ import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/pages/home_page.dart';
 import 'package:swift_chat/pages/auth/login_page.dart';
 import '../../providers/user_provider.dart';
-import '../../utils/error_map.dart';
+import '../../utils/mapping.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -41,7 +41,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       await ref
           .read(userProvider.notifier)
           .register(
-            _usernameController.text.trim(),
+            _usernameController.text.trim().toLowerCase(),
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
@@ -52,14 +52,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       );
     } catch (e, st) {
       if (!mounted || !context.mounted) return;
-
+      log("Registration failed", error: e, stackTrace: st);
       final message =
           e is ClientException ? mapAuthError(e) : "Registration failed";
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
-
-      log("Registration failed", error: e, stackTrace: st);
     } finally {
       setState(() => _isLoading = false);
     }

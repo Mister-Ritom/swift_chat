@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:swift_chat/core/pb_client.dart';
+import 'package:swift_chat/utils/presence_service.dart';
 
 class UserNotifier extends StateNotifier<RecordModel?> {
   UserNotifier()
@@ -27,9 +28,6 @@ class UserNotifier extends StateNotifier<RecordModel?> {
     };
     box.put(_authKey, jsonEncode(data));
     log('Auth saved to Hive');
-
-    // Debug: print contents
-    await debugHive();
   }
 
   /// Delete auth from Hive
@@ -37,22 +35,6 @@ class UserNotifier extends StateNotifier<RecordModel?> {
     final box = Hive.box(name: _boxName);
     box.delete(_authKey);
     log('Auth deleted from Hive');
-
-    // Debug: print contents
-    await debugHive();
-  }
-
-  /// Debug function to print Hive contents
-  Future<void> debugHive() async {
-    final box = Hive.box(name: _boxName);
-    final authJson = box.get(_authKey);
-    if (authJson != null) {
-      final Map<String, dynamic> authMap = jsonDecode(authJson);
-      log("Hive token: ${authMap['token']}");
-      log("Hive user model: ${authMap['model']}");
-    } else {
-      log("Hive authBox is empty");
-    }
   }
 
   /// Login
@@ -86,6 +68,7 @@ class UserNotifier extends StateNotifier<RecordModel?> {
     _pb.authStore.clear();
     state = null;
     await _deleteFromHive();
+    PresenceService().stop();
     log('User logged out');
   }
 

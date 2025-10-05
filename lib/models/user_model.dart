@@ -6,10 +6,12 @@ class UserModel {
   final String email;
   final bool emailVerified;
   final String name;
-  final String? avatar; //Only file id
-  final String? username;
-  final DateTime created;
-  final DateTime updated;
+  final String? avatar; // Only file id
+  final String username;
+  final bool publicAccount;
+  final DateTime? created;
+  final DateTime? updated;
+  final DateTime? lastSeen;
 
   UserModel({
     required this.id,
@@ -18,8 +20,10 @@ class UserModel {
     required this.name,
     required this.avatar,
     required this.username,
-    required this.created,
-    required this.updated,
+    required this.publicAccount,
+    this.created,
+    this.updated,
+    this.lastSeen,
   });
 
   factory UserModel.fromRecord(RecordModel record) {
@@ -29,9 +33,11 @@ class UserModel {
       emailVerified: record.getBoolValue('verified'),
       name: record.getStringValue('name'),
       avatar: record.getStringValue('avatar'),
-      username: record.data['username'], // custom field
-      created: DateTime.parse(record.created),
-      updated: DateTime.parse(record.updated),
+      username: record.getStringValue('username'),
+      publicAccount: record.getBoolValue('publicAccount'),
+      created: _parseDate(record.getStringValue('created')),
+      updated: _parseDate(record.getStringValue('updated')),
+      lastSeen: _parseDate(record.getStringValue('lastSeen')),
     );
   }
 
@@ -43,8 +49,10 @@ class UserModel {
       'name': name,
       'avatar': avatar,
       'username': username,
-      'created': created.toIso8601String(),
-      'updated': updated.toIso8601String(),
+      'publicAccount': publicAccount,
+      'created': created?.toIso8601String(),
+      'updated': updated?.toIso8601String(),
+      'lastSeen': lastSeen?.toIso8601String(),
     };
   }
 
@@ -55,8 +63,10 @@ class UserModel {
     String? name,
     String? avatar,
     String? username,
+    bool? publicAccount,
     DateTime? created,
     DateTime? updated,
+    DateTime? lastSeen,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -65,8 +75,10 @@ class UserModel {
       name: name ?? this.name,
       avatar: avatar ?? this.avatar,
       username: username ?? this.username,
+      publicAccount: publicAccount ?? this.publicAccount,
       created: created ?? this.created,
       updated: updated ?? this.updated,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 
@@ -75,5 +87,10 @@ class UserModel {
     if (avatar == null || avatar!.isEmpty) return null;
     final baseUrl = PBClient.instance.baseUrl; // <- use from PBClient
     return "$baseUrl/api/files/users/$id/$avatar";
+  }
+
+  static DateTime? _parseDate(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value);
   }
 }

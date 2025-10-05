@@ -4,9 +4,26 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:swift_chat/app.dart';
 import 'package:swift_chat/core/app_theme.dart';
-import 'package:swift_chat/utils/auth_utils.dart';
+import 'package:swift_chat/utils/pb_utils.dart';
 
-const primaryColor = Colors.orange;
+// Base navy color
+const int _navyPrimaryValue = 0xFF001F54; // deep navy
+
+// Custom MaterialColor for navy
+const MaterialColor navyBlue = MaterialColor(_navyPrimaryValue, <int, Color>{
+  50: Color(0xFFE6E8F3),
+  100: Color(0xFFBCC4E0),
+  200: Color(0xFF8EA0CC),
+  300: Color(0xFF6080B8),
+  400: Color(0xFF3E66A9),
+  500: Color(_navyPrimaryValue), // main color
+  600: Color(0xFF001C4D),
+  700: Color(0xFF001842),
+  800: Color(0xFF001538),
+  900: Color(0xFF000E28),
+});
+
+const primaryColor = navyBlue;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -45,6 +62,10 @@ class SwiftChat extends StatelessWidget {
     return base.copyWith(
       primaryColor: primaryColor,
       scaffoldBackgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      cardColor:
+          isDark
+              ? const Color(0xFF1E1E1E)
+              : const Color(0xFFF8F8F8), // 👈 Added
       colorScheme: base.colorScheme.copyWith(
         primary: primaryColor,
         secondary: Colors.amberAccent,
