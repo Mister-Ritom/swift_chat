@@ -85,7 +85,7 @@ class UserModel {
   /// Returns the full avatar image URL or null if not set
   String? get avatarUrl {
     if (avatar == null || avatar!.isEmpty) return null;
-    final baseUrl = PBClient.instance.baseUrl; // <- use from PBClient
+    final baseUrl = PBClient.instance.baseURL; // <- use from PBClient
     return "$baseUrl/api/files/users/$id/$avatar";
   }
 

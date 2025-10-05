@@ -34,7 +34,7 @@ class PresenceService with WidgetsBindingObserver {
     _timer = Timer.periodic(heartbeatInterval, (_) => _sendHeartbeat());
 
     _connSub = Connectivity().onConnectivityChanged.listen((result) {
-      if (result == ConnectivityResult.none) {
+      if (result.contains(ConnectivityResult.none)) {
         _pause();
       } else {
         _resume();

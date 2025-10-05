@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:crypto/crypto.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:pocketbase/pocketbase.dart';
-import 'package:swift_chat/utils/pb_utils.dart';
 
 final _pb = PBClient.instance;
 
@@ -47,12 +45,6 @@ Future<void> sendMessage(
       .create(
         body: {'message': messageText, 'chat': chat.id, 'sender': senderId},
       );
-}
-
-/// Stream messages for a chat
-Stream<RecordSubscriptionEvent> messagesStream(String userId1, String userId2) {
-  final chatId = getChatId(userId1, userId2);
-  return streamCollection('messages');
 }
 
 /// Get all chats for a user

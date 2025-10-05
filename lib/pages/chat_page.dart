@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:swift_chat/models/message_model.dart';
 import 'package:swift_chat/models/user_model.dart';
 import 'package:swift_chat/utils/mapping.dart';
 import 'package:swift_chat/utils/message_helper.dart';
@@ -43,33 +45,43 @@ class _ChatPageState extends State<ChatPage> {
       await createChat(senderId, receiverId);
     }
 
-    unsubscribe = await _pb.collection('messages').subscribe("*", (evenet) {
-      setState(() {
-        messages.add(evenet.record!);
-      });
-    }, filter: 'chat="$chatId"');
+    unsubscribe = await _pb
+        .collection('messages')
+        .subscribe(
+          "*",
+          (evenet) {
+            setState(() {
+              messages.add(evenet.record!);
+            });
+          },
+          filter: 'chat="$chatId"',
+          expand: 'sender',
+        );
 
     // Load initial messages
     final initialMessages = await _pb
         .collection('messages')
-        .getFullList(filter: 'chat="$chatId"', sort: '-created');
+        .getFullList(
+          filter: 'chat="$chatId"',
+          sort: '-created',
+          expand: 'sender',
+        );
     setState(() {
       messages = initialMessages;
     });
   }
 
   @override
-  void dispose() async {
-    // ❌ dispose cannot be async
+  void dispose() {
     super.dispose();
-    await unsubscribe();
+    unsubscribe();
   }
 
   void sendMessageHandler() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    final senderId = _pb.authStore.model!.id;
+    final senderId = _pb.authStore.record!.id;
     final receiverId = widget.receiver.id;
 
     await sendMessage(text, senderId, receiverId);
@@ -81,184 +93,207 @@ class _ChatPageState extends State<ChatPage> {
     final user = widget.receiver;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textFieldColor = isDark ? Colors.grey[800] : Colors.grey[200];
-    final sortedMessages = [...messages]
-      ..sort((a, b) => b.created.compareTo(a.created));
+    final sortedMessages = [...messages]..sort(
+      (a, b) =>
+          b.getStringValue('created').compareTo(a.getStringValue('created')),
+    );
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // AppBar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Theme.of(context).cardColor,
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: FaIcon(FontAwesomeIcons.arrowLeft),
-                  ),
-                  const SizedBox(width: 8),
-                  ProfilePicture(
-                    name: user.username,
-                    radius: 20,
-                    fontsize: 24,
-                    img: user.avatarUrl,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.username,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+      body: Column(
+        children: [
+          // AppBar
+          Container(
+            padding: const EdgeInsets.fromLTRB(8, 36, 8, 8),
+            color: textFieldColor,
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: FaIcon(FontAwesomeIcons.arrowLeft),
+                ),
+                const SizedBox(width: 8),
+                ProfilePicture(
+                  name: user.username,
+                  radius: 20,
+                  fontsize: 24,
+                  img: user.avatarUrl,
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.username,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    userOnlineWidget(
+                      userId: user.id,
+                      onlineWidget: Text(
+                        "Online",
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: Colors.lightGreen),
+                      ),
+                      offlineWidget: (String lastSeen) {
+                        final date =
+                            lastSeen == ""
+                                ? user.lastSeen
+                                : DateTime.tryParse(lastSeen);
+                        if (date != null) {
+                          return SizedBox(
+                            width: 160,
+                            child: FittedBox(
+                              child: Text("Last seen ${timeAgo(date)}"),
+                            ),
+                          );
+                        } else {
+                          return SizedBox.shrink();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {},
+                  icon: const FaIcon(FontAwesomeIcons.ellipsisVertical),
+                ),
+              ],
+            ),
+          ),
+
+          // Messages
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ListView.builder(
+                reverse: true,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = MessageModel.fromRecord(sortedMessages[index]);
+                  final isMe = msg.sender.id == _pb.authStore.record!.id;
+
+                  final isNewMessage =
+                      index ==
+                      0; // newest message at the top because reverse:true
+
+                  Widget messageBubble = Align(
+                    alignment:
+                        isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color:
+                            isMe
+                                ? Theme.of(
+                                  context,
+                                ).primaryColor.withValues(alpha: 0.8)
+                                : Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        msg.message,
+                        style: TextStyle(
+                          color:
+                              isMe
+                                  ? Colors.white
+                                  : Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
                         ),
                       ),
-                      userOnlineWidget(
-                        userId: user.id,
-                        onlineWidget: Text(
-                          "Online",
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: Colors.lightGreen),
+                    ),
+                  );
+
+                  if (isNewMessage) {
+                    // Wrap only the newest message in Animate
+                    messageBubble = Animate(
+                      key: ValueKey(msg.id),
+                      effects: [
+                        FadeEffect(duration: 150.ms),
+                        SlideEffect(
+                          begin: Offset(isMe ? 1 : -1, 0), // slide from bottom
+                          duration: 150.ms,
+                          curve: Curves.easeOut,
                         ),
-                        offlineWidget: (String lastSeen) {
-                          final date =
-                              lastSeen == ""
-                                  ? user.lastSeen
-                                  : DateTime.tryParse(lastSeen);
-                          if (date != null) {
-                            return SizedBox(
-                              width: 160,
-                              child: FittedBox(
-                                child: Text("Last seen ${timeAgo(date)}"),
-                              ),
-                            );
-                          } else {
-                            return SizedBox.shrink();
-                          }
-                        },
+                      ],
+                      child: messageBubble,
+                    );
+                  }
+
+                  return messageBubble;
+                },
+              ),
+            ),
+          ),
+
+          // Input
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.only(left: 12),
+                  width: MediaQuery.of(context).size.width - 64,
+                  child: Stack(
+                    alignment: Alignment.centerRight,
+                    children: [
+                      TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: textFieldColor,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          hintText: 'Type a message',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(26),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.add, size: 24),
+                            ),
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.image, size: 24),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const FaIcon(FontAwesomeIcons.ellipsisVertical),
-                  ),
-                ],
-              ),
-            ),
-
-            // Messages
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: ListView.builder(
-                  reverse: true,
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = sortedMessages[index];
-                    final isMe = msg.get('sender') == _pb.authStore.model!.id;
-                    return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        decoration: BoxDecoration(
-                          color:
-                              isMe
-                                  ? Theme.of(
-                                    context,
-                                  ).primaryColor.withOpacity(0.8)
-                                  : Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          msg.get('message') ?? '',
-                          style: TextStyle(
-                            color:
-                                isMe
-                                    ? Colors.white
-                                    : Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ),
-
-            // Input
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.only(left: 12),
-                    width: MediaQuery.of(context).size.width - 64,
-                    child: Stack(
-                      alignment: Alignment.centerRight,
-                      children: [
-                        TextField(
-                          controller: _controller,
-                          minLines: 1,
-                          maxLines: 5,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: textFieldColor,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                            hintText: 'Type a message',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(26),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.add, size: 24),
-                              ),
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.image, size: 24),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: IconButton(
+                    icon: const FaIcon(
+                      FontAwesomeIcons.arrowRight,
+                      color: Colors.white,
+                      size: 24,
                     ),
+                    onPressed: sendMessageHandler,
+                    splashRadius: 24,
                   ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: IconButton(
-                      icon: const FaIcon(
-                        FontAwesomeIcons.arrowRight,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: sendMessageHandler,
-                      splashRadius: 24,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
