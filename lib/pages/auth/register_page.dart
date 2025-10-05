@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:swift_chat/core/pb_client.dart';
-import 'package:swift_chat/pages/home_page.dart';
+import 'package:swift_chat/pages/screns/home_page.dart';
 import 'package:swift_chat/pages/auth/login_page.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/mapping.dart';

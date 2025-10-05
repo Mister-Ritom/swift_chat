@@ -28,7 +28,9 @@ Future<RecordModel?> getChat(String userId1, String userId2) async {
 /// Create a new chat with ID as user1,user2
 Future<RecordModel> createChat(String userId1, String userId2) async {
   final chatId = getChatId(userId1, userId2);
-  return await _pb.collection('chats').create(body: {'id': chatId});
+  return await _pb
+      .collection('chats')
+      .create(body: {'id': chatId, 'members': "$userId1,$userId2"});
 }
 
 /// Send a message; creates chat if it doesn't exist

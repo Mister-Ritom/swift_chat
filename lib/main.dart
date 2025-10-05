@@ -73,6 +73,7 @@ class SwiftChat extends StatelessWidget {
       textTheme: buildTextTheme(textColor),
       iconTheme: IconThemeData(color: iconColor),
       appBarTheme: buildAppBarTheme(isDark: isDark),
+      bottomNavigationBarTheme: buildBottomNavBarTheme(isDark: isDark),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
         foregroundColor: isDark ? Colors.black87 : Colors.white,

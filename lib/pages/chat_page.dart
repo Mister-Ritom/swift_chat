@@ -22,6 +22,7 @@ class _ChatPageState extends State<ChatPage> {
   List<RecordModel> messages = [];
   final _pb = PBClient.instance;
   late String chatId;
+  late Function unsubscribe;
 
   @override
   void initState() {
@@ -42,7 +43,7 @@ class _ChatPageState extends State<ChatPage> {
       await createChat(senderId, receiverId);
     }
 
-    _pb.collection('messages').subscribe("*", (evenet) {
+    unsubscribe = await _pb.collection('messages').subscribe("*", (evenet) {
       setState(() {
         messages.add(evenet.record!);
       });
@@ -55,6 +56,13 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       messages = initialMessages;
     });
+  }
+
+  @override
+  void dispose() async {
+    // ❌ dispose cannot be async
+    super.dispose();
+    await unsubscribe();
   }
 
   void sendMessageHandler() async {
@@ -73,7 +81,8 @@ class _ChatPageState extends State<ChatPage> {
     final user = widget.receiver;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textFieldColor = isDark ? Colors.grey[800] : Colors.grey[200];
-
+    final sortedMessages = [...messages]
+      ..sort((a, b) => b.created.compareTo(a.created));
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -149,7 +158,7 @@ class _ChatPageState extends State<ChatPage> {
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final msg = messages[index];
+                    final msg = sortedMessages[index];
                     final isMe = msg.get('sender') == _pb.authStore.model!.id;
                     return Align(
                       alignment:

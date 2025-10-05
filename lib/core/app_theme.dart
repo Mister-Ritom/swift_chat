@@ -46,18 +46,38 @@ TextTheme buildTextTheme(Color textColor) => TextTheme(
 );
 
 AppBarTheme buildAppBarTheme({required bool isDark}) => AppBarTheme(
-  foregroundColor: isDark ? Colors.white : Colors.black,
+  foregroundColor: Colors.white,
+  backgroundColor: primaryColor.shade500,
   elevation: 0,
-  iconTheme: IconThemeData(color: isDark ? Colors.white70 : Colors.black87),
+  iconTheme: IconThemeData(color: Colors.white),
   titleTextStyle: GoogleFonts.robotoSlab(
     fontSize: 20,
     fontWeight: FontWeight.w600,
-    color: isDark ? Colors.white : Colors.black,
+    color: Colors.white,
   ),
   centerTitle: true,
   toolbarHeight: 32,
   titleSpacing: 0,
 );
+
+BottomNavigationBarThemeData buildBottomNavBarTheme({required bool isDark}) =>
+    BottomNavigationBarThemeData(
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      selectedItemColor: primaryColor,
+      unselectedItemColor: isDark ? Colors.white54 : Colors.black54,
+      selectedLabelStyle: GoogleFonts.montserrat(
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+      ),
+      unselectedLabelStyle: GoogleFonts.montserrat(
+        fontWeight: FontWeight.w400,
+        fontSize: 12,
+      ),
+      type: BottomNavigationBarType.fixed,
+      showUnselectedLabels: true,
+      elevation: 10,
+      landscapeLayout: BottomNavigationBarLandscapeLayout.centered,
+    );
 
 ElevatedButtonThemeData buildElevatedButtonTheme({required bool isDark}) =>
     ElevatedButtonThemeData(
