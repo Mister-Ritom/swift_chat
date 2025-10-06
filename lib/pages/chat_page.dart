@@ -4,6 +4,7 @@ import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:swift_chat/models/message_model.dart';
 import 'package:swift_chat/models/user_model.dart';
+import 'package:swift_chat/utils/file_picker_helper.dart';
 import 'package:swift_chat/utils/mapping.dart';
 import 'package:swift_chat/utils/message_helper.dart';
 import 'package:swift_chat/utils/presence_service.dart';
@@ -267,7 +268,10 @@ class _ChatPageState extends State<ChatPage> {
                               icon: const Icon(Icons.add, size: 24),
                             ),
                             IconButton(
-                              onPressed: () {},
+                              onPressed: () async {
+                                final cameraImage =
+                                    FilePickerHelper.captureImageFromCamera();
+                              },
                               icon: const Icon(Icons.image, size: 24),
                             ),
                           ],
