@@ -12,11 +12,16 @@ class DiscoverPage extends StatelessWidget {
     final pb = PBClient.instance;
     final recordList = await pb
         .collection("users")
-        .getList(filter: "publicAccount=true");
+        .getList(filter: 'publicAccount=true');
     if (recordList.items.isEmpty) return [];
-    return recordList.items.map((e) {
-      return UserModel.fromRecord(e);
-    }).toList();
+    return recordList.items
+        .where((e) {
+          return e.id != pb.authStore.record!.id;
+        })
+        .map((e) {
+          return UserModel.fromRecord(e);
+        })
+        .toList();
   }
 
   @override

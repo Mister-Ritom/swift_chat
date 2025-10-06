@@ -8,7 +8,6 @@ import 'package:swift_chat/utils/file_picker_helper.dart';
 import 'package:swift_chat/utils/mapping.dart';
 import 'package:swift_chat/utils/message_helper.dart';
 import 'package:swift_chat/utils/presence_service.dart';
-
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:pocketbase/pocketbase.dart';
 
@@ -27,6 +26,8 @@ class _ChatPageState extends State<ChatPage> {
   late String chatId;
   late Function unsubscribe;
 
+  bool _showAttachmentOptions = false;
+
   @override
   void initState() {
     super.initState();
@@ -36,10 +37,8 @@ class _ChatPageState extends State<ChatPage> {
   void initChat() async {
     final senderId = _pb.authStore.record!.id;
     final receiverId = widget.receiver.id;
-
     chatId = getChatId(senderId, receiverId);
 
-    // Create chat if it doesn't exist
     try {
       await _pb.collection('chats').getOne(chatId);
     } catch (_) {
@@ -50,16 +49,15 @@ class _ChatPageState extends State<ChatPage> {
         .collection('messages')
         .subscribe(
           "*",
-          (evenet) {
+          (event) {
             setState(() {
-              messages.add(evenet.record!);
+              messages.add(event.record!);
             });
           },
           filter: 'chat="$chatId"',
           expand: 'sender',
         );
 
-    // Load initial messages
     final initialMessages = await _pb
         .collection('messages')
         .getFullList(
@@ -67,6 +65,7 @@ class _ChatPageState extends State<ChatPage> {
           sort: '-created',
           expand: 'sender',
         );
+
     setState(() {
       messages = initialMessages;
     });
@@ -74,229 +73,358 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
-    super.dispose();
     unsubscribe();
+    super.dispose();
   }
 
   void sendMessageHandler() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-
     final senderId = _pb.authStore.record!.id;
     final receiverId = widget.receiver.id;
-
     await sendMessage(text, senderId, receiverId);
     _controller.clear();
+  }
+
+  void toggleAttachmentOptions() {
+    setState(() => _showAttachmentOptions = !_showAttachmentOptions);
   }
 
   @override
   Widget build(BuildContext context) {
     final user = widget.receiver;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textFieldColor = isDark ? Colors.grey[800] : Colors.grey[200];
+    final textFieldColor = isDark ? Colors.grey[850]! : Colors.grey[200]!;
+
     final sortedMessages = [...messages]..sort(
       (a, b) =>
           b.getStringValue('created').compareTo(a.getStringValue('created')),
     );
+
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          // AppBar
-          Container(
-            padding: const EdgeInsets.fromLTRB(8, 36, 8, 8),
-            color: textFieldColor,
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: FaIcon(FontAwesomeIcons.arrowLeft),
-                ),
-                const SizedBox(width: 8),
-                ProfilePicture(
-                  name: user.username,
-                  radius: 20,
-                  fontsize: 24,
-                  img: user.avatarUrl,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // ===== Messages & UI =====
+          Column(
+            children: [
+              // AppBar
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 36, 8, 8),
+                color: textFieldColor,
+                child: Row(
                   children: [
-                    Text(
-                      user.username,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const FaIcon(FontAwesomeIcons.arrowLeft),
                     ),
-                    userOnlineWidget(
-                      userId: user.id,
-                      onlineWidget: Text(
-                        "Online",
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: Colors.lightGreen),
-                      ),
-                      offlineWidget: (String lastSeen) {
-                        final date =
-                            lastSeen == ""
-                                ? user.lastSeen
-                                : DateTime.tryParse(lastSeen);
-                        if (date != null) {
-                          return SizedBox(
-                            width: 160,
-                            child: FittedBox(
-                              child: Text("Last seen ${timeAgo(date)}"),
-                            ),
-                          );
-                        } else {
-                          return SizedBox.shrink();
-                        }
-                      },
+                    const SizedBox(width: 8),
+                    ProfilePicture(
+                      name: user.username,
+                      radius: 20,
+                      fontsize: 24,
+                      img: user.avatarUrl,
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.username,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        userOnlineWidget(
+                          userId: user.id,
+                          onlineWidget: Text(
+                            "Online",
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: Colors.lightGreen),
+                          ),
+                          offlineWidget: (String lastSeen) {
+                            final date =
+                                lastSeen.isEmpty
+                                    ? user.lastSeen
+                                    : DateTime.tryParse(lastSeen);
+                            if (date != null) {
+                              return SizedBox(
+                                width: 160,
+                                child: FittedBox(
+                                  child: Text("Last seen ${timeAgo(date)}"),
+                                ),
+                              );
+                            } else {
+                              return const SizedBox.shrink();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const FaIcon(FontAwesomeIcons.ellipsisVertical),
                     ),
                   ],
                 ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {},
-                  icon: const FaIcon(FontAwesomeIcons.ellipsisVertical),
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Messages
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ListView.builder(
-                reverse: true,
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final msg = MessageModel.fromRecord(sortedMessages[index]);
-                  final isMe = msg.sender.id == _pb.authStore.record!.id;
+              // Messages
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _showAttachmentOptions = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = MessageModel.fromRecord(
+                          sortedMessages[index],
+                        );
+                        final isMe = msg.sender.id == _pb.authStore.record!.id;
+                        final isNewMessage = index == 0;
 
-                  final isNewMessage =
-                      index ==
-                      0; // newest message at the top because reverse:true
-
-                  Widget messageBubble = Align(
-                    alignment:
-                        isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color:
-                            isMe
-                                ? Theme.of(
-                                  context,
-                                ).primaryColor.withValues(alpha: 0.8)
-                                : Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        msg.message,
-                        style: TextStyle(
-                          color:
+                        Widget messageBubble = Align(
+                          alignment:
                               isMe
-                                  ? Colors.white
-                                  : Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.color,
-                        ),
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color:
+                                  isMe
+                                      ? Theme.of(
+                                        context,
+                                      ).primaryColor.withOpacity(0.85)
+                                      : Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              msg.message,
+                              style: TextStyle(
+                                color:
+                                    isMe
+                                        ? Colors.white
+                                        : Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.color,
+                              ),
+                            ),
+                          ),
+                        );
+
+                        if (isNewMessage) {
+                          messageBubble = Animate(
+                            key: ValueKey(msg.id),
+                            effects: [
+                              FadeEffect(duration: 150.ms),
+                              SlideEffect(
+                                begin: Offset(isMe ? 1 : -1, 0),
+                                duration: 150.ms,
+                                curve: Curves.easeOut,
+                              ),
+                            ],
+                            child: messageBubble,
+                          );
+                        }
+                        return messageBubble;
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              // Input
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.only(left: 12),
+                      width: MediaQuery.of(context).size.width - 64,
+                      child: Stack(
+                        alignment: Alignment.centerRight,
+                        children: [
+                          TextField(
+                            controller: _controller,
+                            minLines: 1,
+                            maxLines: 5,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: textFieldColor,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                              hintText: 'Type a message',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(26),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  onPressed: toggleAttachmentOptions,
+                                  icon: const Icon(Icons.add, size: 24),
+                                ),
+                                IconButton(
+                                  onPressed: () async {
+                                    await FilePickerHelper.captureImageFromCamera();
+                                  },
+                                  icon: const Icon(Icons.image, size: 24),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: IconButton(
+                        icon: const FaIcon(
+                          FontAwesomeIcons.arrowRight,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        onPressed: sendMessageHandler,
+                        splashRadius: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
 
-                  if (isNewMessage) {
-                    // Wrap only the newest message in Animate
-                    messageBubble = Animate(
-                      key: ValueKey(msg.id),
-                      effects: [
-                        FadeEffect(duration: 150.ms),
-                        SlideEffect(
-                          begin: Offset(isMe ? 1 : -1, 0), // slide from bottom
-                          duration: 150.ms,
-                          curve: Curves.easeOut,
+          // ===== Attachment Popup =====
+          if (_showAttachmentOptions)
+            Positioned(
+              bottom: 80,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Animate(
+                  effects: [
+                    FadeEffect(duration: 100.ms),
+                    SlideEffect(
+                      duration: 100.ms,
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                      curve: Curves.easeOut,
+                    ),
+                  ],
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[900] : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
-                      child: messageBubble,
-                    );
-                  }
-
-                  return messageBubble;
-                },
+                    ),
+                    child: GridView.count(
+                      shrinkWrap: true,
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      children: [
+                        _AttachmentOption(
+                          icon: Icons.image,
+                          label: "Photos",
+                          color: Colors.pinkAccent,
+                          onTap: () async {
+                            await FilePickerHelper.pickImages(
+                              allowMultiple: true,
+                            );
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: Icons.videocam,
+                          label: "Videos",
+                          color: Colors.deepPurpleAccent,
+                          onTap: () async {
+                            await FilePickerHelper.pickVideos(
+                              allowMultiple: true,
+                            );
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: Icons.camera_alt,
+                          label: "Camera",
+                          color: Colors.blueAccent,
+                          onTap: () async {
+                            await FilePickerHelper.captureImageFromCamera();
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: Icons.insert_drive_file,
+                          label: "Files",
+                          color: Colors.orangeAccent,
+                          onTap: () async {
+                            await FilePickerHelper.pickAnyFile(
+                              allowMultiple: true,
+                            );
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+        ],
+      ),
+    );
+  }
+}
 
-          // Input
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 8),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.only(left: 12),
-                  width: MediaQuery.of(context).size.width - 64,
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: [
-                      TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 5,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: textFieldColor,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 18,
-                          ),
-                          hintText: 'Type a message',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.add, size: 24),
-                            ),
-                            IconButton(
-                              onPressed: () async {
-                                final cameraImage =
-                                    FilePickerHelper.captureImageFromCamera();
-                              },
-                              icon: const Icon(Icons.image, size: 24),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: IconButton(
-                    icon: const FaIcon(
-                      FontAwesomeIcons.arrowRight,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    onPressed: sendMessageHandler,
-                    splashRadius: 24,
-                  ),
-                ),
-              ],
-            ),
+class _AttachmentOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AttachmentOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: color.withOpacity(0.15),
+            child: Icon(icon, color: color, size: 26),
           ),
+          const SizedBox(height: 6),
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
         ],
       ),
     );

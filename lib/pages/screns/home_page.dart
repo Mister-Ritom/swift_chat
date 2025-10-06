@@ -30,9 +30,14 @@ class HomePage extends ConsumerWidget {
 
     // Collect all unique other user IDs
     for (var chat in chatItems) {
-      final members = (chat.data['members'] as String).split(',');
-      final otherUserId = members.firstWhere((id) => id != currentUserId);
-      otherUserIds.add(otherUserId);
+      final members = chat.getStringValue('members').split(',');
+      if (members.isNotEmpty) {
+        final otherUserId = members.firstWhere(
+          (id) => id != currentUserId,
+          orElse: () => "",
+        );
+        otherUserIds.add(otherUserId);
+      }
     }
 
     // Fetch all users in parallel
