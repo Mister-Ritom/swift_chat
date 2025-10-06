@@ -343,9 +343,10 @@ class _ChatPageState extends State<ChatPage> {
                       crossAxisCount: 4,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
+
                       children: [
                         _AttachmentOption(
-                          icon: Icons.image,
+                          icon: FontAwesomeIcons.image,
                           label: "Photos",
                           color: Colors.pinkAccent,
                           onTap: () async {
@@ -356,7 +357,7 @@ class _ChatPageState extends State<ChatPage> {
                           },
                         ),
                         _AttachmentOption(
-                          icon: Icons.videocam,
+                          icon: FontAwesomeIcons.video,
                           label: "Videos",
                           color: Colors.deepPurpleAccent,
                           onTap: () async {
@@ -367,7 +368,7 @@ class _ChatPageState extends State<ChatPage> {
                           },
                         ),
                         _AttachmentOption(
-                          icon: Icons.camera_alt,
+                          icon: FontAwesomeIcons.camera,
                           label: "Camera",
                           color: Colors.blueAccent,
                           onTap: () async {
@@ -376,13 +377,48 @@ class _ChatPageState extends State<ChatPage> {
                           },
                         ),
                         _AttachmentOption(
-                          icon: Icons.insert_drive_file,
+                          icon: FontAwesomeIcons.file,
                           label: "Files",
                           color: Colors.orangeAccent,
                           onTap: () async {
                             await FilePickerHelper.pickAnyFile(
                               allowMultiple: true,
                             );
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: FontAwesomeIcons.music,
+                          label: "Music",
+                          color: Colors.tealAccent.shade700,
+                          onTap: () async {
+                            await FilePickerHelper.pickAudio(
+                              allowMultiple: true,
+                            );
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: FontAwesomeIcons.microphone,
+                          label: "Record",
+                          color: Colors.redAccent,
+                          onTap: () async {
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: FontAwesomeIcons.addressBook,
+                          label: "Contacts",
+                          color: Colors.greenAccent.shade700,
+                          onTap: () async {
+                            toggleAttachmentOptions();
+                          },
+                        ),
+                        _AttachmentOption(
+                          icon: FontAwesomeIcons.mapLocationDot,
+                          label: "Location",
+                          color: Colors.lightBlueAccent,
+                          onTap: () async {
                             toggleAttachmentOptions();
                           },
                         ),
@@ -421,7 +457,7 @@ class _AttachmentOption extends StatelessWidget {
           CircleAvatar(
             radius: 24,
             backgroundColor: color.withOpacity(0.15),
-            child: Icon(icon, color: color, size: 26),
+            child: FaIcon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 6),
           Text(label, style: Theme.of(context).textTheme.labelSmall),
