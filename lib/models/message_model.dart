@@ -31,14 +31,14 @@ class MessageModel {
   }
 
   // Get full link of a document (PocketBase file URL)
-  static String getDocumentLink(String filename) {
+  static String getDocumentLink(String filename, String recordId) {
     String baseUrl =
         PBClient.instance.baseURL; // replace with your PocketBase URL
-    return "$baseUrl/api/files/messages/$filename";
+    return "$baseUrl/api/files/messages/$recordId/$filename";
   }
 
   // Get list of full links
   List<String> get documentLinks {
-    return documents.map((doc) => getDocumentLink(doc)).toList();
+    return documents.map((doc) => getDocumentLink(doc, id)).toList();
   }
 }

@@ -1,6 +1,9 @@
 import 'dart:developer';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:swift_chat/utils/video_thumbnail.dart';
 
 String mapAuthError(ClientException e) {
   try {
@@ -66,5 +69,78 @@ String timeAgo(DateTime date) {
   } else {
     //percentage 100 in year is used to convert eg. 2025 to 25
     return '${date.day}//${date.month}//${date.year % 100}';
+  }
+}
+
+/// Reusable file thumbnail builder
+Widget buildFileThumbnail(String url, double size, bool isNetwork) {
+  final ext = url.split('.').last.toLowerCase();
+
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext)) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child:
+          isNetwork
+              ? Image.network(url, width: size, height: size, fit: BoxFit.cover)
+              : Image.file(
+                File(url),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+              ),
+    );
+  } else if (['mp4', 'mov', 'avi', 'mkv'].contains(ext)) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: VideoThumbnailWidget(video: url, isNetwork: isNetwork),
+    );
+  } else if (['mp3', 'wav', 'm4a', 'aac'].contains(ext)) {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.music_note, color: Colors.teal),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              url.split('/').last,
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  } else {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.insert_drive_file, color: Colors.orange),
+          const SizedBox(height: 4),
+          Text(
+            url.split('/').last,
+            style: const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 }
