@@ -52,6 +52,7 @@ dependencies:
   flutter_profile_picture: ^2.0.0
   connectivity_plus: ^7.0.0
   crypto: ^3.0.6
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

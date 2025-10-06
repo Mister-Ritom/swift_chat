@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
@@ -22,6 +24,7 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   List<RecordModel> messages = [];
+  List<File> files = [];
   final _pb = PBClient.instance;
   late String chatId;
   late Function unsubscribe;
@@ -277,7 +280,11 @@ class _ChatPageState extends State<ChatPage> {
                                 ),
                                 IconButton(
                                   onPressed: () async {
-                                    await FilePickerHelper.captureImageFromCamera();
+                                    final image =
+                                        await FilePickerHelper.captureImageFromCamera();
+                                    if (image != null) {
+                                      files.add(image);
+                                    }
                                   },
                                   icon: const Icon(Icons.image, size: 24),
                                 ),
@@ -332,7 +339,7 @@ class _ChatPageState extends State<ChatPage> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -350,9 +357,10 @@ class _ChatPageState extends State<ChatPage> {
                           label: "Photos",
                           color: Colors.pinkAccent,
                           onTap: () async {
-                            await FilePickerHelper.pickImages(
+                            final userFiles = await FilePickerHelper.pickImages(
                               allowMultiple: true,
                             );
+                            files.addAll(userFiles);
                             toggleAttachmentOptions();
                           },
                         ),
@@ -361,9 +369,10 @@ class _ChatPageState extends State<ChatPage> {
                           label: "Videos",
                           color: Colors.deepPurpleAccent,
                           onTap: () async {
-                            await FilePickerHelper.pickVideos(
+                            final userFiles = await FilePickerHelper.pickVideos(
                               allowMultiple: true,
                             );
+                            files.addAll(userFiles);
                             toggleAttachmentOptions();
                           },
                         ),
@@ -372,7 +381,11 @@ class _ChatPageState extends State<ChatPage> {
                           label: "Camera",
                           color: Colors.blueAccent,
                           onTap: () async {
-                            await FilePickerHelper.captureImageFromCamera();
+                            final file =
+                                await FilePickerHelper.captureImageFromCamera();
+                            if (file != null) {
+                              files.add(file);
+                            }
                             toggleAttachmentOptions();
                           },
                         ),
@@ -381,9 +394,11 @@ class _ChatPageState extends State<ChatPage> {
                           label: "Files",
                           color: Colors.orangeAccent,
                           onTap: () async {
-                            await FilePickerHelper.pickAnyFile(
-                              allowMultiple: true,
-                            );
+                            final userFiles =
+                                await FilePickerHelper.pickAnyFile(
+                                  allowMultiple: true,
+                                );
+                            files.addAll(userFiles);
                             toggleAttachmentOptions();
                           },
                         ),
@@ -392,9 +407,10 @@ class _ChatPageState extends State<ChatPage> {
                           label: "Music",
                           color: Colors.tealAccent.shade700,
                           onTap: () async {
-                            await FilePickerHelper.pickAudio(
+                            final userFiles = await FilePickerHelper.pickAudio(
                               allowMultiple: true,
                             );
+                            files.addAll(userFiles);
                             toggleAttachmentOptions();
                           },
                         ),

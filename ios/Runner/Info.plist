@@ -45,5 +45,25 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to select and share photos.</string>
+	
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs access to your photo library to save images.</string>
+
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to take pictures and videos.</string>
+
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to your microphone to record audio messages.</string>
+
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs access to your contacts to share and connect with friends.</string>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to share your position with contacts.</string>
+
+	<key>NSMusicUsageDescription</key>
+	<string>This app may access your music files for sharing purposes.</string>
 </dict>
 </plist>
