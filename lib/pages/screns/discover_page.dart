@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
-import 'package:swift_chat/pages/chat_page.dart';
+import 'package:swift_chat/pages/chat/chat_page.dart';
 import 'package:swift_chat/utils/presence_service.dart';
 
 class DiscoverPage extends StatelessWidget {

@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
-import 'package:swift_chat/pages/chat_page.dart';
+import 'package:swift_chat/pages/chat/chat_page.dart';
 import 'package:swift_chat/utils/presence_service.dart';
 
 class HomePage extends ConsumerWidget {

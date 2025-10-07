@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:swift_chat/app.dart';
 import 'package:swift_chat/models/user_model.dart';
-import 'package:swift_chat/profile/profile_page.dart';
+import 'package:swift_chat/pages/profile/profile_page.dart';
 import 'package:swift_chat/providers/user_provider.dart';
 
 class MenuPage extends ConsumerWidget {
@@ -49,8 +49,8 @@ class MenuPage extends ConsumerWidget {
                     BoxShadow(
                       color:
                           isDark
-                              ? Colors.black.withOpacity(0.3)
-                              : Colors.blue.withOpacity(0.3),
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : Colors.blue.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -96,7 +96,7 @@ class MenuPage extends ConsumerWidget {
             ),
 
             // Divider
-            Divider(color: theme.dividerColor.withOpacity(0.2)),
+            Divider(color: theme.dividerColor.withValues(alpha: 0.3)),
 
             // Menu items
             Expanded(

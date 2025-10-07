@@ -9,7 +9,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:swift_chat/models/message_model.dart';
 import 'package:swift_chat/models/user_model.dart';
-import 'package:swift_chat/utils/attachment_preview.dart';
+import 'package:swift_chat/pages/chat/attachment_option.dart';
+import 'package:swift_chat/pages/chat/message_bubble.dart';
+import 'package:swift_chat/pages/chat/attachment_preview.dart';
 import 'package:swift_chat/utils/file_picker_helper.dart';
 import 'package:swift_chat/utils/mapping.dart';
 import 'package:swift_chat/utils/message_helper.dart';
@@ -43,32 +45,40 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> initChat() async {
     final senderId = _pb.authStore.record!.id;
     final receiverId = widget.receiver.id;
-    chatId = getChatId(senderId, receiverId);
-
-    try {
-      await _pb.collection('chats').getOne(chatId);
-    } catch (_) {
-      await createChat(senderId, receiverId);
-    }
+    chatId = MessageHelper.getChatId(senderId, receiverId);
 
     unsubscribe = await _pb
         .collection('messages')
         .subscribe(
           "*",
-          (event) => setState(() => messages.add(event.record!)),
+          (event) => setState(() {
+            setState(() {
+              messages.add(event.record!);
+              messages.sort(
+                (a, b) => b
+                    .getStringValue('created')
+                    .compareTo(a.getStringValue('created')),
+              );
+              if (messages.length > 50) {
+                messages.removeRange(50, messages.length);
+              }
+            });
+          }),
           filter: 'chat="$chatId"',
           expand: 'sender',
         );
 
     final initialMessages = await _pb
         .collection('messages')
-        .getFullList(
+        .getList(
+          page: 1,
+          perPage: 50,
           filter: 'chat="$chatId"',
           sort: '-created',
           expand: 'sender',
         );
 
-    setState(() => messages.addAll(initialMessages));
+    setState(() => messages.addAll(initialMessages.items));
   }
 
   @override
@@ -77,50 +87,30 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  String getFileName(String path) {
-    final parts = path.split(RegExp(r'[\\/]+')); // handles both / and \
-    return parts.isNotEmpty ? parts.last : '';
-  }
-
   ValueNotifier<double> uploadProgress = ValueNotifier(0); // 0.0 to 1.0
 
   void sendMessageHandler() async {
     final text = _controller.text.trim();
     if (text.isEmpty && files.isEmpty) return;
+    final request = await MessageHelper.buildMessageRequest(
+      text,
+      chatId,
+      files,
+    );
 
-    final senderId = _pb.authStore.record!.id;
-
-    // Build multipart request manually for streaming
-    final url = Uri.parse('${_pb.baseURL}/api/collections/messages/records');
-    final request =
-        http.MultipartRequest('POST', url)
-          ..fields['message'] = text
-          ..fields['chat'] = chatId
-          ..fields['sender'] = senderId
-          ..headers['Authorization'] = 'Bearer ${_pb.authStore.token}';
-
-    // Add files as streams
-    for (final file in files) {
-      final length = await file.length();
-      final stream = http.ByteStream(file.openRead());
-      final multipartFile = http.MultipartFile(
-        'documents',
-        stream,
-        length,
-        filename: getFileName(file.path),
-      );
-      request.files.add(multipartFile);
-      log('Added file: ${file.path}, size: $length bytes');
+    try {
+      final streamedResponse = await request.send();
+      await _handleUploadResponse(streamedResponse);
+    } catch (e) {
+      log('Upload error: $e');
     }
+  }
 
-    // Send request with streamed response
-    final streamedResponse = await request.send();
-
-    // Track progress
-    final totalBytes = streamedResponse.contentLength ?? 1;
+  Future<void> _handleUploadResponse(http.StreamedResponse response) async {
+    final totalBytes = response.contentLength ?? 1;
     int bytesReceived = 0;
 
-    streamedResponse.stream.listen(
+    response.stream.listen(
       (chunk) {
         bytesReceived += chunk.length;
         uploadProgress.value = bytesReceived / totalBytes;
@@ -129,19 +119,16 @@ class _ChatPageState extends State<ChatPage> {
         );
       },
       onDone: () async {
-        if (streamedResponse.statusCode == 200 ||
-            streamedResponse.statusCode == 201) {
+        if (response.statusCode == 200 || response.statusCode == 201) {
           log('Message sent successfully');
           _controller.clear();
           files.clear();
           uploadProgress.value = 0;
         } else {
-          log('Upload failed: ${streamedResponse.statusCode}');
+          log('Upload failed: ${response.statusCode}');
         }
       },
-      onError: (e) {
-        log('Upload error: $e');
-      },
+      onError: (e, st) => log('Upload error', error: e, stackTrace: st),
       cancelOnError: true,
     );
   }
@@ -152,18 +139,13 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final sortedMessages = [...messages]..sort(
-      (a, b) =>
-          b.getStringValue('created').compareTo(a.getStringValue('created')),
-    );
-
     return Scaffold(
       body: Stack(
         children: [
           Column(
             children: [
               _buildAppBar(context),
-              Expanded(child: _buildMessageList(sortedMessages)),
+              Expanded(child: _buildMessageList()),
               _buildInputBar(context),
             ],
           ),
@@ -178,7 +160,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // ===================== WIDGETS =====================
   Widget _buildAppBar(BuildContext context) {
     final user = widget.receiver;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -243,17 +224,17 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessageList(List<RecordModel> sortedMessages) {
+  Widget _buildMessageList() {
     return ListView.builder(
       reverse: true,
-      itemCount: sortedMessages.length,
+      itemCount: messages.length,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       itemBuilder: (context, index) {
-        final msg = MessageModel.fromRecord(sortedMessages[index]);
+        final msg = MessageModel.fromRecord(messages[index]);
         final isMe = msg.sender.id == _pb.authStore.record!.id;
         final isNewMessage = index == 0;
 
-        Widget bubble = _MessageBubble(msg: msg, isMe: isMe);
+        Widget bubble = MessageBubble(msg: msg, isMe: isMe);
         if (isNewMessage) {
           bubble = Animate(
             key: ValueKey(msg.id),
@@ -383,7 +364,7 @@ class _ChatPageState extends State<ChatPage> {
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               children: [
-                _AttachmentOption(
+                AttachmentOption(
                   icon: FontAwesomeIcons.image,
                   label: "Photos",
                   color: Colors.pinkAccent,
@@ -395,7 +376,7 @@ class _ChatPageState extends State<ChatPage> {
                     toggleAttachmentOptions();
                   },
                 ),
-                _AttachmentOption(
+                AttachmentOption(
                   icon: FontAwesomeIcons.video,
                   label: "Videos",
                   color: Colors.deepPurpleAccent,
@@ -407,7 +388,7 @@ class _ChatPageState extends State<ChatPage> {
                     toggleAttachmentOptions();
                   },
                 ),
-                _AttachmentOption(
+                AttachmentOption(
                   icon: FontAwesomeIcons.camera,
                   label: "Camera",
                   color: Colors.blueAccent,
@@ -418,7 +399,7 @@ class _ChatPageState extends State<ChatPage> {
                     toggleAttachmentOptions();
                   },
                 ),
-                _AttachmentOption(
+                AttachmentOption(
                   icon: FontAwesomeIcons.file,
                   label: "Files",
                   color: Colors.orangeAccent,
@@ -434,215 +415,6 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  final MessageModel msg;
-  final bool isMe;
-  const _MessageBubble({required this.msg, required this.isMe});
-
-  @override
-  Widget build(BuildContext context) {
-    const maxFilesToShow = 4;
-    final totalFiles = msg.documentLinks.length;
-    final filesToShow = msg.documentLinks.take(maxFilesToShow).toList();
-    final remainingFiles = totalFiles - maxFilesToShow;
-
-    List<Widget> fileWidgets = [];
-
-    for (int i = 0; i < filesToShow.length; i++) {
-      final url = filesToShow[i];
-
-      Widget thumb = buildFileThumbnail(url, 120, true);
-
-      // If last visible file and there are more, overlay blur + text
-      if (i == maxFilesToShow - 1 && remainingFiles > 0) {
-        thumb = Stack(
-          children: [
-            SizedBox(width: 120, height: 120, child: thumb),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  color: Colors.black.withValues(alpha: 0.5),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '+$remainingFiles more',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => _showAllFiles(context),
-                ),
-              ),
-            ),
-          ],
-        );
-      }
-
-      fileWidgets.add(thumb);
-    }
-
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(
-          gradient:
-              isMe
-                  ? LinearGradient(
-                    colors: [
-                      Theme.of(context).primaryColor.withValues(alpha: 1),
-                      Theme.of(context).primaryColor.withValues(alpha: 0.5),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                  : LinearGradient(
-                    colors: [
-                      Theme.of(context).cardColor,
-                      Theme.of(context).cardColor.withValues(alpha: 0.7),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft:
-                isMe ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight:
-                isMe ? const Radius.circular(4) : const Radius.circular(16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (msg.message.isNotEmpty)
-              Text(
-                msg.message,
-                style: TextStyle(
-                  color:
-                      isMe
-                          ? Colors.white
-                          : Theme.of(context).textTheme.bodyMedium?.color,
-                ),
-              ),
-            if (fileWidgets.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(spacing: 8, runSpacing: 8, children: fileWidgets),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Show bottom modal with thumbnails of all files
-  void _showAllFiles(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.5), // outside tap dim
-      builder:
-          (_) => GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).pop(),
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.6,
-              minChildSize: 0.4,
-              maxChildSize: 0.95,
-              builder:
-                  (_, controller) => GestureDetector(
-                    onTap: () {}, // block tap inside sheet
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: GridView.builder(
-                        controller: controller,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              mainAxisSpacing: 8,
-                              crossAxisSpacing: 8,
-                              childAspectRatio: 1,
-                            ),
-                        itemCount: msg.documentLinks.length,
-                        itemBuilder: (_, index) {
-                          return buildFileThumbnail(
-                            msg.documentLinks[index],
-                            120,
-                            true,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-            ),
-          ),
-    );
-  }
-}
-
-class _AttachmentOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _AttachmentOption({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: FaIcon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 6),
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
-        ],
       ),
     );
   }

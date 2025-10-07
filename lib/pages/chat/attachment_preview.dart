@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:swift_chat/utils/mapping.dart';
 
-// ===================== ATTACHMENT PREVIEW =====================
 class AttachmentPreview extends StatelessWidget {
   final List<File> files;
   final void Function(int index) onRemove;
