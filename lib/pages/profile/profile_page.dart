@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
+import 'package:swift_chat/utils/file_picker_helper.dart';
 import 'package:swift_chat/utils/mapping.dart';
 import 'package:swift_chat/providers/user_provider.dart';
 
@@ -43,19 +43,6 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
     nameCtrl.dispose();
     bioCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> pickImage(bool isCover) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        if (isCover) {
-          newCover = File(picked.path);
-        } else {
-          newAvatar = File(picked.path);
-        }
-      });
-    }
   }
 
   Future<void> saveChanges() async {
@@ -265,7 +252,15 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
                               bottom: 0,
                               right: 0,
                               child: InkWell(
-                                onTap: () => pickImage(false),
+                                onTap: () async {
+                                  final files =
+                                      await FilePickerHelper.pickImages();
+                                  if (files.isNotEmpty) {
+                                    setState(() {
+                                      newAvatar = files[0];
+                                    });
+                                  }
+                                },
                                 child: const CircleAvatar(
                                   radius: 16,
                                   backgroundColor: Colors.black54,
@@ -468,7 +463,15 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
   Widget ifEditingButton({required bool isCover}) {
     if (!isEditing) return const SizedBox.shrink();
     return InkWell(
-      onTap: () => pickImage(isCover),
+      onTap: () async {
+        if (!isCover) return;
+        final files = await FilePickerHelper.pickImages();
+        if (files.isNotEmpty) {
+          setState(() {
+            newCover = files[0];
+          });
+        }
+      },
       child: const CircleAvatar(
         radius: 20,
         backgroundColor: Colors.black54,
