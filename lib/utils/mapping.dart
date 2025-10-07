@@ -54,7 +54,7 @@ String mapAuthError(ClientException e) {
   }
 }
 
-String timeAgo(DateTime date) {
+String timeAgo(DateTime date, {bool limit = true}) {
   final now = DateTime.now();
   final difference = now.difference(date);
 
@@ -64,10 +64,11 @@ String timeAgo(DateTime date) {
     return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
   } else if (difference.inHours < 24) {
     return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
-  } else if (difference.inDays <= 3) {
+  } else if (!limit || difference.inDays <= 3) {
+    // If limit is false, always return in days no matter how large
     return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
   } else {
-    //percentage 100 in year is used to convert eg. 2025 to 25
+    // Otherwise fallback to date format
     return '${date.day}//${date.month}//${date.year % 100}';
   }
 }

@@ -190,7 +190,7 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const FaIcon(FontAwesomeIcons.arrowLeft),
+            icon: const FaIcon(FontAwesomeIcons.angleLeft, size: 32),
           ),
           const SizedBox(width: 8),
           ProfilePicture(

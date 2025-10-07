@@ -6,10 +6,10 @@ class UserModel {
   final String email;
   final bool emailVerified;
   final String name;
-  final String? avatar; // file id
-  final String? cover; // new - cover photo file id
+  final String avatar;
+  final String cover;
   final String username;
-  final String? bio; // new - short user bio text
+  final String bio;
   final bool publicAccount;
   final DateTime? created;
   final DateTime? updated;
@@ -96,14 +96,14 @@ class UserModel {
 
   /// Returns the full avatar image URL or null if not set
   String? get avatarUrl {
-    if (avatar == null || avatar!.isEmpty) return null;
+    if (avatar.isEmpty) return null;
     final baseUrl = PBClient.instance.baseURL;
     return "$baseUrl/api/files/users/$id/$avatar";
   }
 
   /// Returns the full cover image URL or null if not set
   String? get coverUrl {
-    if (cover == null || cover!.isEmpty) return null;
+    if (cover.isEmpty) return null;
     final baseUrl = PBClient.instance.baseURL;
     return "$baseUrl/api/files/users/$id/$cover";
   }
