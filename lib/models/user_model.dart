@@ -6,8 +6,10 @@ class UserModel {
   final String email;
   final bool emailVerified;
   final String name;
-  final String? avatar; // Only file id
+  final String? avatar; // file id
+  final String? cover; // new - cover photo file id
   final String username;
+  final String? bio; // new - short user bio text
   final bool publicAccount;
   final DateTime? created;
   final DateTime? updated;
@@ -19,7 +21,9 @@ class UserModel {
     required this.emailVerified,
     required this.name,
     required this.avatar,
+    required this.cover,
     required this.username,
+    required this.bio,
     required this.publicAccount,
     this.created,
     this.updated,
@@ -33,7 +37,9 @@ class UserModel {
       emailVerified: record.getBoolValue('verified'),
       name: record.getStringValue('name'),
       avatar: record.getStringValue('avatar'),
+      cover: record.getStringValue('cover'),
       username: record.getStringValue('username'),
+      bio: record.getStringValue('bio'),
       publicAccount: record.getBoolValue('publicAccount'),
       created: _parseDate(record.getStringValue('created')),
       updated: _parseDate(record.getStringValue('updated')),
@@ -48,7 +54,9 @@ class UserModel {
       'verified': emailVerified,
       'name': name,
       'avatar': avatar,
+      'cover': cover,
       'username': username,
+      'bio': bio,
       'publicAccount': publicAccount,
       'created': created?.toIso8601String(),
       'updated': updated?.toIso8601String(),
@@ -62,7 +70,9 @@ class UserModel {
     bool? emailVerified,
     String? name,
     String? avatar,
+    String? cover,
     String? username,
+    String? bio,
     bool? publicAccount,
     DateTime? created,
     DateTime? updated,
@@ -74,7 +84,9 @@ class UserModel {
       emailVerified: emailVerified ?? this.emailVerified,
       name: name ?? this.name,
       avatar: avatar ?? this.avatar,
+      cover: cover ?? this.cover,
       username: username ?? this.username,
+      bio: bio ?? this.bio,
       publicAccount: publicAccount ?? this.publicAccount,
       created: created ?? this.created,
       updated: updated ?? this.updated,
@@ -85,8 +97,15 @@ class UserModel {
   /// Returns the full avatar image URL or null if not set
   String? get avatarUrl {
     if (avatar == null || avatar!.isEmpty) return null;
-    final baseUrl = PBClient.instance.baseURL; // <- use from PBClient
+    final baseUrl = PBClient.instance.baseURL;
     return "$baseUrl/api/files/users/$id/$avatar";
+  }
+
+  /// Returns the full cover image URL or null if not set
+  String? get coverUrl {
+    if (cover == null || cover!.isEmpty) return null;
+    final baseUrl = PBClient.instance.baseURL;
+    return "$baseUrl/api/files/users/$id/$cover";
   }
 
   static DateTime? _parseDate(String? value) {

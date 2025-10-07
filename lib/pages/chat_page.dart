@@ -278,7 +278,7 @@ class _ChatPageState extends State<ChatPage> {
     final textFieldColor = isDark ? Colors.grey[850]! : Colors.grey[200]!;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
       child: Row(
         children: [
           Expanded(
@@ -319,6 +319,7 @@ class _ChatPageState extends State<ChatPage> {
                         },
                         icon: const Icon(Icons.image, size: 24),
                       ),
+                      SizedBox(width: 4),
                     ],
                   ),
                 ),

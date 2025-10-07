@@ -56,7 +56,7 @@ AppBarTheme buildAppBarTheme({required bool isDark}) => AppBarTheme(
     color: Colors.white,
   ),
   centerTitle: true,
-  toolbarHeight: 32,
+  toolbarHeight: 46,
   titleSpacing: 0,
 );
 

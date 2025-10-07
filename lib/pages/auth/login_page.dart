@@ -84,11 +84,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // App Icon TODO
-                  Icon(
-                        Icons.chat_bubble_outline,
-                        size: 80,
-                        color: theme.colorScheme.primary,
+                  Image.asset(
+                        "assets/icons/swift_chat.png",
+                        width: 80,
+                        height: 80,
                       )
                       .animate()
                       .fadeIn(duration: 400.ms)

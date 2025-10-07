@@ -120,6 +120,15 @@ Widget buildFileThumbnail(String url, double size, bool isNetwork) {
       ),
     );
   } else {
+    String filename = url.split('/').last;
+    if (isNetwork) {
+      //Pocketbase adds a random string at the end starting with _
+      final names = filename.split("_");
+      final removedName = names.removeLast();
+      final ext = ".${removedName.split(".").last}";
+      names.add(ext);
+      filename = names.join();
+    }
     return Container(
       width: size,
       height: size,
@@ -134,8 +143,8 @@ Widget buildFileThumbnail(String url, double size, bool isNetwork) {
           const Icon(Icons.insert_drive_file, color: Colors.orange),
           const SizedBox(height: 4),
           Text(
-            url.split('/').last,
-            style: const TextStyle(fontSize: 12),
+            filename,
+            style: const TextStyle(fontSize: 12, color: Colors.black),
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
           ),
