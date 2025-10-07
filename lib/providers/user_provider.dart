@@ -15,6 +15,10 @@ class UserNotifier extends StateNotifier<RecordModel?> {
             : null,
       );
 
+  void updateUser(RecordModel updated) {
+    state = updated;
+  }
+
   final PocketBase _pb = PBClient.instance;
   final String _boxName = 'authBox';
   final String _authKey = 'authData';

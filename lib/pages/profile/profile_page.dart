@@ -1,117 +1,497 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocketbase/pocketbase.dart';
+import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
 import 'package:swift_chat/utils/mapping.dart';
+import 'package:swift_chat/providers/user_provider.dart';
 
-class MyProfilePage extends StatefulWidget {
+class MyProfilePage extends ConsumerStatefulWidget {
   final UserModel user;
   const MyProfilePage({super.key, required this.user});
 
   @override
-  State<MyProfilePage> createState() => _MyProfilePageState();
+  ConsumerState<MyProfilePage> createState() => _MyProfilePageState();
 }
 
-class _MyProfilePageState extends State<MyProfilePage> {
+class _MyProfilePageState extends ConsumerState<MyProfilePage> {
+  bool isEditing = false;
+  late TextEditingController nameCtrl;
+  late TextEditingController bioCtrl;
+  File? newAvatar;
+  File? newCover;
+  bool isSaving = false;
+  bool isPublic = false;
+
+  final PocketBase _pb = PBClient.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    nameCtrl = TextEditingController(text: widget.user.name);
+    bioCtrl = TextEditingController(text: widget.user.bio);
+    isPublic = widget.user.publicAccount;
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    bioCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> pickImage(bool isCover) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() {
+        if (isCover) {
+          newCover = File(picked.path);
+        } else {
+          newAvatar = File(picked.path);
+        }
+      });
+    }
+  }
+
+  Future<void> saveChanges() async {
+    if (isSaving) return;
+    setState(() => isSaving = true);
+
+    try {
+      final userId = _pb.authStore.record!.id;
+      final body = {
+        'name': nameCtrl.text.trim(),
+        'bio': bioCtrl.text.trim(),
+        'publicAccount': isPublic,
+      };
+
+      final files = <http.MultipartFile>[];
+      if (newAvatar != null) {
+        files.add(
+          await http.MultipartFile.fromPath(
+            'avatar',
+            newAvatar!.path,
+            filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          ),
+        );
+      }
+      if (newCover != null) {
+        files.add(
+          await http.MultipartFile.fromPath(
+            'cover',
+            newCover!.path,
+            filename: 'cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          ),
+        );
+      }
+
+      final updated = await _pb
+          .collection('users')
+          .update(userId, body: body, files: files);
+      ref.read(userProvider.notifier).updateUser(updated);
+
+      if (!mounted) return;
+      setState(() => isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isSaving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
+    }
+  }
+
+  Future<void> changePassword() async {
+    final newPasswordCtrl = TextEditingController();
+    final confirmPasswordCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Change Password"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: newPasswordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "New Password"),
+                ),
+                TextField(
+                  controller: confirmPasswordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Confirm Password",
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Cancel",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (newPasswordCtrl.text != confirmPasswordCtrl.text ||
+                      newPasswordCtrl.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Passwords do not match or are empty"),
+                      ),
+                    );
+                    return;
+                  }
+                  try {
+                    await _pb
+                        .collection('users')
+                        .update(
+                          _pb.authStore.record!.id,
+                          body: {
+                            'password': newPasswordCtrl.text,
+                            'passwordConfirm': confirmPasswordCtrl.text,
+                          },
+                        );
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Password updated successfully"),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Failed to update password: $e"),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Text(
+                  "Save",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("My Profile")),
-      body: Column(
-        children: [
-          SizedBox(
-            width: size.width,
-            height: 250,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                _buildCoverImage(user.coverUrl, size.width, 250),
-
-                // Centered profile + info row
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Profile Picture with border
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: ProfilePicture(
-                        name: user.username,
-                        radius: 50,
-                        fontsize: 22,
-                        img: user.avatarUrl,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Frosted Info Card
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                        child: Container(
-                          width: size.width * 0.55,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+      appBar: AppBar(
+        title: const Text("My Profile"),
+        actions: [
+          IconButton(
+            icon: Icon(isEditing ? Icons.close : Icons.edit),
+            onPressed: () => setState(() => isEditing = !isEditing),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(
+              width: size.width,
+              height: 250,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  _buildCoverImage(
+                    newCover?.path ?? user.coverUrl,
+                    size.width,
+                    250,
+                  ),
+                  Positioned(
+                    right: 16,
+                    top: 16,
+                    child: ifEditingButton(isCover: true),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                            ),
+                            child: ClipOval(
+                              child:
+                                  newAvatar != null
+                                      ? Image.file(
+                                        newAvatar!,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      )
+                                      : ProfilePicture(
+                                        name: user.username,
+                                        radius: 50,
+                                        fontsize: 22,
+                                        img: user.avatarUrl,
+                                      ),
+                            ),
                           ),
-                          color: Colors.black.withValues(alpha: 0.4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                user.name.isEmpty ? "No name" : user.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                          if (isEditing)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: InkWell(
+                                onTap: () => pickImage(false),
+                                child: const CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: Colors.black54,
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
                                 ),
                               ),
-                              Text(
-                                "@${user.username}",
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (user.created != null)
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Container(
+                            width: size.width * 0.55,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            color: Colors.black.withValues(alpha: 0.4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                isEditing
+                                    ? TextField(
+                                      controller: nameCtrl,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: "Name",
+                                        hintStyle: const TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white70,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white70,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.blueAccent,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 6,
+                                            ),
+                                      ),
+                                    )
+                                    : Text(
+                                      user.name.isEmpty ? "No name" : user.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
                                 Text(
-                                  "Joined ${timeAgo(user.created!, limit: false)}",
+                                  "@${user.username}",
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 14,
                                   ),
                                 ),
-                            ],
+                                if (user.created != null)
+                                  Text(
+                                    "Joined ${timeAgo(user.created!, limit: false)}",
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Bio",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child:
+                        isEditing
+                            ? TextField(
+                              controller: bioCtrl,
+                              maxLines: null,
+                              decoration: InputDecoration(
+                                hintText: "Write something about yourself...",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            )
+                            : Text(
+                              user.bio.isNotEmpty == true
+                                  ? user.bio
+                                  : "No bio added.",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Email",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Public Account"),
+                    value: isPublic,
+                    onChanged:
+                        isEditing
+                            ? (val) => setState(() => isPublic = val)
+                            : null,
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(Icons.lock),
+                    title: const Text("Change Password"),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: changePassword,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (isEditing)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ElevatedButton.icon(
+                  onPressed: saveChanges,
+                  icon: const Icon(Icons.save),
+                  label: const Text("Save Changes"),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget ifEditingButton({required bool isCover}) {
+    if (!isEditing) return const SizedBox.shrink();
+    return InkWell(
+      onTap: () => pickImage(isCover),
+      child: const CircleAvatar(
+        radius: 20,
+        backgroundColor: Colors.black54,
+        child: Icon(Icons.camera_alt, color: Colors.white, size: 20),
       ),
     );
   }
 
   Widget _buildCoverImage(String? img, double width, double height) {
-    if (img == null) {
+    if (img == null || img.isEmpty) {
       return Container(
         width: width,
         height: height,
         color: Colors.grey.shade700,
         child: const Icon(Icons.image, size: 64, color: Colors.white70),
+      );
+    }
+    if (FileSystemEntity.typeSync(img) != FileSystemEntityType.notFound) {
+      return Image.file(
+        File(img),
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
       );
     }
     return Image.network(img, width: width, height: height, fit: BoxFit.cover);
