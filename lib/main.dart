@@ -1,9 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:swift_chat/app.dart';
 import 'package:swift_chat/core/app_theme.dart';
+import 'package:swift_chat/firebase_options.dart';
 import 'package:swift_chat/utils/pb_utils.dart';
 
 // Base navy color
@@ -31,6 +33,8 @@ void main() async {
   Hive.defaultDirectory = dir.path;
 
   hiveAuthCheck();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const ProviderScope(child: SwiftChat()));
 }

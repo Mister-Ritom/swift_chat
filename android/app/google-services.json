@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "318510990337",
+    "project_id": "swift-chat-ba90f",
+    "storage_bucket": "swift-chat-ba90f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:318510990337:android:54aa401392fc458ff06c00",
+        "android_client_info": {
+          "package_name": "me.ritom.swift_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxMU64glQZNdbNNSVvl2Kdi7I4fmN5b-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
