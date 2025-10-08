@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:swift_chat/app.dart';
 import 'package:swift_chat/core/app_theme.dart';
 import 'package:swift_chat/firebase_options.dart';
+import 'package:swift_chat/utils/fcm_service.dart';
 import 'package:swift_chat/utils/pb_utils.dart';
 
 // Base navy color
@@ -26,6 +31,8 @@ const MaterialColor navyBlue = MaterialColor(_navyPrimaryValue, <int, Color>{
 });
 
 const primaryColor = navyBlue;
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -35,6 +42,24 @@ void main() async {
   hiveAuthCheck();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize local notifications (already done)
+  final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  final iosSettings = DarwinInitializationSettings();
+  var initSettings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+  // Request iOS notification permissions
+  await FirebaseMessaging.instance.requestPermission(provisional: true);
+
+  if (Platform.isAndroid) {
+    //Currently i don't have apn for ios
+    await FCMService.saveFCMToken();
+    await FCMService.setupFCMListeners();
+  }
 
   runApp(const ProviderScope(child: SwiftChat()));
 }
