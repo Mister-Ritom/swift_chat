@@ -69,6 +69,8 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: null,
         title: TextField(
           controller: _searchController,
           decoration: const InputDecoration(

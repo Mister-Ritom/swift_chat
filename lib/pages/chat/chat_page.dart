@@ -45,7 +45,12 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> initChat() async {
     final senderId = _pb.authStore.record!.id;
     final receiverId = widget.receiver.id;
-    chatId = MessageHelper.getChatId(senderId, receiverId);
+
+    final RecordModel chat = await MessageHelper.getChatCreate(
+      senderId,
+      receiverId,
+    );
+    chatId = chat.id;
 
     unsubscribe = await _pb
         .collection('messages')

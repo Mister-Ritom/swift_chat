@@ -21,7 +21,11 @@ class NotificationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Notifications")),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: null,
+        title: Text("Notifications"),
+      ),
       body: FutureBuilder(
         future: getChatsForUser(1),
         builder: (context, snapshot) {

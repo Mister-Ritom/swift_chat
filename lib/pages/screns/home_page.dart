@@ -63,6 +63,8 @@ class HomePage extends ConsumerWidget {
       appBar:
           isMobile
               ? AppBar(
+                automaticallyImplyLeading: false,
+                leading: null,
                 title: Text(
                   "Swift Chat",
                   style: GoogleFonts.pacifico(letterSpacing: 5, fontSize: 24),

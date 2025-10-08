@@ -10,7 +10,7 @@ class MessageHelper {
   static final _pb = PBClient.instance;
 
   /// Returns the chat ID for two users
-  static String getChatId(String userId1, String userId2) {
+  static String _getChatId(String userId1, String userId2) {
     final ids = [userId1, userId2]..sort();
     final combined = ids.join(',');
     final bytes = utf8.encode(combined);
@@ -19,7 +19,7 @@ class MessageHelper {
 
   /// Create a new chat with ID as user1,user2
   static Future<RecordModel> createChat(String userId1, String userId2) async {
-    final chatId = getChatId(userId1, userId2);
+    final chatId = _getChatId(userId1, userId2);
     return await _pb
         .collection('chats')
         .create(body: {'id': chatId, 'members': "$userId1,$userId2"});
@@ -31,8 +31,18 @@ class MessageHelper {
   }
 
   static Future<RecordModel?> getChat(String userId1, String userId2) async {
-    final chatId = getChatId(userId1, userId2);
-    final chatRecord = _pb.collection('chats').getFirstListItem('id="$chatId"');
+    final chatId = _getChatId(userId1, userId2);
+    final chats = await _pb.collection('chats').getList(filter: 'id="$chatId"');
+    if (chats.items.isEmpty) return null;
+    return chats.items[0];
+  }
+
+  static Future<RecordModel> getChatCreate(
+    String userId1,
+    String userId2,
+  ) async {
+    var chatRecord = await getChat(userId1, userId2);
+    chatRecord ??= await createChat(userId1, userId2);
     return chatRecord;
   }
 

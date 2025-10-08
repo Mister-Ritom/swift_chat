@@ -16,40 +16,27 @@ class DesktopHomePage extends ConsumerWidget {
     required this.iconList,
     required this.selectedPage,
   });
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentReceiver = ref.watch(receiverProvider);
     final size = MediaQuery.of(context).size;
     final navWidth = 70.0;
     final pageWidth = size.width - navWidth - 8;
-    final pages = [
-      Row(
-        children: [
-          SizedBox(
-            width: (pageWidth * 1.5 / 4),
-            child: HomePage(isMobile: false),
-          ),
-          SizedBox(
-            width: pageWidth * 2.5 / 4,
-            child: getCurrentPage(currentReceiver),
-          ),
-        ],
-      ),
-      Row(
-        children: [
-          SizedBox(
-            width: (pageWidth * 1.5 / 4),
-            child: DiscoverPage(isMobile: false),
-          ),
-          SizedBox(
-            width: pageWidth * 2.5 / 4,
-            child: getCurrentPage(currentReceiver),
-          ),
-        ],
-      ),
-      NotificationsPage(),
-      MenuPage(),
-    ];
+
+    Widget buildLeftPane() {
+      switch (selectedPage) {
+        case 0:
+          return HomePage(isMobile: false);
+        case 1:
+          return DiscoverPage(isMobile: false);
+        case 2:
+          return NotificationsPage();
+        case 3:
+          return MenuPage();
+        default:
+          return HomePage(isMobile: false);
+      }
+    }
 
     return Scaffold(
       body: SizedBox(
@@ -64,12 +51,35 @@ class DesktopHomePage extends ConsumerWidget {
                 height: size.height,
                 child: Column(children: iconList),
               ),
-              VerticalDivider(width: 8),
-              SizedBox(
-                width: pageWidth,
+              const VerticalDivider(width: 8),
+              Expanded(
                 child: KeyedSubtree(
                   key: ValueKey(selectedPage),
-                  child: pages[selectedPage],
+                  child:
+                      selectedPage <= 1
+                          ? Row(
+                            children: [
+                              // Left half (Home or Discover)
+                              SizedBox(
+                                width: (pageWidth * 1.5 / 4),
+                                child: buildLeftPane(),
+                              ),
+
+                              // Right half (Chat pane - reactive)
+                              SizedBox(
+                                width: pageWidth * 2.5 / 4,
+                                child: Consumer(
+                                  builder: (context, ref, _) {
+                                    final receiver = ref.watch(
+                                      receiverProvider,
+                                    );
+                                    return _getCurrentPage(receiver);
+                                  },
+                                ),
+                              ),
+                            ],
+                          )
+                          : buildLeftPane(),
                 ),
               ),
             ],
@@ -79,17 +89,21 @@ class DesktopHomePage extends ConsumerWidget {
     );
   }
 
-  Widget getCurrentPage(UserModel? receiver) {
+  Widget _getCurrentPage(UserModel? receiver) {
     if (receiver == null) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Image.asset("assets/icons/swift_chat.png", width: 300, height: 300),
-        ],
+      return const Center(
+        child: Image(
+          image: AssetImage("assets/icons/swift_chat.png"),
+          width: 300,
+          height: 300,
+        ),
       );
     } else {
-      return ChatPage(receiver: receiver, isMobile: false);
+      // 👇 Force Flutter to treat this as a new widget whenever receiver.id changes
+      return KeyedSubtree(
+        key: ValueKey(receiver.id),
+        child: ChatPage(receiver: receiver, isMobile: false),
+      );
     }
   }
 }
