@@ -87,6 +87,31 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
+  Future<void> sendNotification() async {
+    try {
+      final pb = PBClient.instance;
+      final senderId = pb.authStore.record!.id;
+      final receiverId = widget.receiver.id;
+      final rawText = _controller.text.trim();
+      final text =
+          rawText.length > 300 ? '${rawText.substring(0, 300)}…' : rawText;
+      final filesCount = files.length;
+      await pb
+          .collection('notifications')
+          .create(
+            body: {
+              'sender': senderId,
+              'receiver': receiverId,
+              'chat': chatId,
+              'text': text,
+              'files': filesCount,
+            },
+          );
+    } catch (e) {
+      log('Failed to send notification: $e');
+    }
+  }
+
   ValueNotifier<double> uploadProgress = ValueNotifier(0); // 0.0 to 1.0
 
   void sendMessageHandler() async {
@@ -101,6 +126,7 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final streamedResponse = await request.send();
       await _handleUploadResponse(streamedResponse);
+      sendNotification();
     } catch (e) {
       log('Upload error: $e');
     }

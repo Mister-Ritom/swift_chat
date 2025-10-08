@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
@@ -11,7 +12,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 /// Background message handler
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Handling a background message: ${message.messageId}');
+  log('Handling a background message: ${message.messageId}');
   await flutterLocalNotificationsPlugin.show(
     0,
     message.notification?.title ?? 'New Notification',
@@ -32,7 +33,7 @@ class FCMService {
   static Future<void> saveFCMToken() async {
     final pb = PBClient.instance;
     final fcmToken = await FirebaseMessaging.instance.getToken();
-    print("FCM Token: $fcmToken");
+    log("FCM Token: $fcmToken");
 
     if (fcmToken != null && pb.authStore.isValid) {
       final userRecord = pb.authStore.record!;
@@ -53,7 +54,7 @@ class FCMService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Foreground message received: ${message.notification?.title}");
+      log("Foreground message received: ${message.notification?.title}");
       flutterLocalNotificationsPlugin.show(
         0,
         message.notification?.title ?? 'New Notification',
@@ -70,7 +71,7 @@ class FCMService {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("Notification clicked: ${message.data}");
+      log("Notification clicked: ${message.data}");
       // Navigate to specific chat or handle accordingly
     });
   }
@@ -125,9 +126,9 @@ class FCMService {
     );
 
     if (response.statusCode == 200) {
-      print('Notification sent successfully!');
+      log('Notification sent successfully!');
     } else {
-      print('Error sending notification: ${response.body}');
+      log('Error sending notification: ${response.body}');
     }
   }
 }

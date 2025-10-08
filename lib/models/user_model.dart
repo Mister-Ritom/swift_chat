@@ -47,23 +47,6 @@ class UserModel {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'verified': emailVerified,
-      'name': name,
-      'avatar': avatar,
-      'cover': cover,
-      'username': username,
-      'bio': bio,
-      'publicAccount': publicAccount,
-      'created': created?.toIso8601String(),
-      'updated': updated?.toIso8601String(),
-      'lastSeen': lastSeen?.toIso8601String(),
-    };
-  }
-
   UserModel copyWith({
     String? id,
     String? email,
