@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:pocketbase/pocketbase.dart';
@@ -25,6 +26,7 @@ class UserNotifier extends StateNotifier<RecordModel?> {
 
   /// Save auth to Hive
   Future<void> _saveToHive() async {
+    if (kIsWeb) return;
     final box = Hive.box(name: _boxName);
     final data = {
       'token': _pb.authStore.token,
@@ -36,6 +38,7 @@ class UserNotifier extends StateNotifier<RecordModel?> {
 
   /// Delete auth from Hive
   Future<void> _deleteFromHive() async {
+    if (kIsWeb) return;
     final box = Hive.box(name: _boxName);
     box.delete(_authKey);
     log('Auth deleted from Hive');

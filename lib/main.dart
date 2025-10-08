@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,16 +35,14 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final dir = await getApplicationDocumentsDirectory();
-  Hive.defaultDirectory = dir.path;
-
-  hiveAuthCheck();
-
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  if (Platform.isAndroid) {
-    //Currently i don't have apn for ios
-    // Initialize local notifications (already done)
+  if (!kIsWeb) {
+    //for now persistence login is disabled on web
+    final dir = await getApplicationDocumentsDirectory();
+    hiveAuthCheck();
+    Hive.defaultDirectory = dir.path;
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     final androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );

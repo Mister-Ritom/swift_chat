@@ -37,7 +37,7 @@ dependencies:
   pocketbase: ^0.23.0+1
   flutter_riverpod: ^2.6.1
   hive: ^4.0.0-dev.2
-  isar_flutter_libs: ^4.0.0-dev.13
+  isar_flutter_libs: ^4.0.0-dev.14
   path_provider: ^2.1.0
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1

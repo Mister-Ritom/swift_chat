@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -23,7 +24,8 @@ class FilePickerHelper {
     bool video = false,
     bool audio = false,
   }) async {
-    if (Platform.isMacOS) {
+    if (kIsWeb) return true;
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
       return true; // macOS handles Finder/Dialogs automatically
     }
 
@@ -88,7 +90,7 @@ class FilePickerHelper {
     if (!await _requestPermissions(
       photosRead: true,
       photosAddOnly: true,
-      video: Platform.isAndroid,
+      video: defaultTargetPlatform == TargetPlatform.android,
     )) {
       return [];
     }
