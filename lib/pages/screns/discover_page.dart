@@ -1,19 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
 import 'package:swift_chat/pages/chat/chat_page.dart';
+import 'package:swift_chat/providers/chat_receiver_provider.dart';
 import 'package:swift_chat/utils/presence_service.dart';
 
-class DiscoverPage extends StatefulWidget {
-  const DiscoverPage({super.key});
+class DiscoverPage extends ConsumerStatefulWidget {
+  final bool isMobile;
+  const DiscoverPage({super.key, this.isMobile = true});
 
   @override
-  State<DiscoverPage> createState() => _DiscoverPageState();
+  ConsumerState<DiscoverPage> createState() => _DiscoverPageState();
 }
 
-class _DiscoverPageState extends State<DiscoverPage> {
+class _DiscoverPageState extends ConsumerState<DiscoverPage> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   late Future<List<UserModel>> _futureUsers;
@@ -99,10 +102,18 @@ class _DiscoverPageState extends State<DiscoverPage> {
               final user = users[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ChatPage(receiver: user)),
-                  );
+                  {
+                    if (!widget.isMobile) {
+                      ref.read(receiverProvider.notifier).updateReceiver(user);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatPage(receiver: user),
+                        ),
+                      );
+                    }
+                  }
                 },
                 leading: Stack(
                   children: [
@@ -132,7 +143,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   ],
                 ),
                 title: Text(user.username),
-                subtitle: user.bio.isNotEmpty ? Text(user.bio) : null,
+                subtitle:
+                    widget.isMobile
+                        ? user.bio.isNotEmpty
+                            ? Text(user.bio)
+                            : null
+                        : null,
               );
             },
           );

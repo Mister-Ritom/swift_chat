@@ -8,12 +8,14 @@ import 'package:pocketbase/pocketbase.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:swift_chat/models/user_model.dart';
 import 'package:swift_chat/pages/chat/chat_page.dart';
+import 'package:swift_chat/providers/chat_receiver_provider.dart';
 import 'package:swift_chat/utils/presence_service.dart';
 
 class HomePage extends ConsumerWidget {
-  const HomePage({super.key});
+  final bool isMobile;
+  const HomePage({super.key, this.isMobile = true});
 
-  Future<ResultList<RecordModel>> getPublicUsers(int page) {
+  Future<ResultList<RecordModel>> getChatsForUser(int page) {
     final pb = PBClient.instance;
     final currentUserId = pb.authStore.record!.id;
     return pb
@@ -21,9 +23,7 @@ class HomePage extends ConsumerWidget {
         .getList(page: page, filter: 'members~"$currentUserId"');
   }
 
-  Future<List<UserModel>> getOtherUsersFromChats(
-    List<RecordModel> chatItems,
-  ) async {
+  Future<List<UserModel>> getChatMembers(List<RecordModel> chatItems) async {
     final pb = PBClient.instance;
     final currentUserId = pb.authStore.record!.id;
     final Set<String> otherUserIds = {};
@@ -58,19 +58,24 @@ class HomePage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext homeContext, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Swift Chat",
-          style: GoogleFonts.pacifico(letterSpacing: 5, fontSize: 24),
-        ),
-        toolbarHeight: 96,
-      ),
+      appBar:
+          isMobile
+              ? AppBar(
+                title: Text(
+                  "Swift Chat",
+                  style: GoogleFonts.pacifico(letterSpacing: 5, fontSize: 24),
+                ),
+                toolbarHeight: 96,
+              )
+              : null,
       body: Padding(
-        padding: const EdgeInsets.only(top: 12), //Some margin from the appbar
+        padding: EdgeInsets.only(
+          top: isMobile ? 12 : 0,
+        ), //Some margin from the appbar
         child: FutureBuilder<ResultList<RecordModel>>(
-          future: getPublicUsers(1),
+          future: getChatsForUser(1),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
@@ -85,7 +90,7 @@ class HomePage extends ConsumerWidget {
             if (!snapshot.hasData) return SizedBox.shrink();
             final records = snapshot.data!.items;
             return FutureBuilder<List<UserModel>>(
-              future: getOtherUsersFromChats(records),
+              future: getChatMembers(records),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final items = snapshot.data!;
@@ -98,12 +103,18 @@ class HomePage extends ConsumerWidget {
                       final user = items[index];
                       return ListTile(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatPage(receiver: user),
-                            ),
-                          );
+                          if (!isMobile) {
+                            ref
+                                .read(receiverProvider.notifier)
+                                .updateReceiver(user);
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(receiver: user),
+                              ),
+                            );
+                          }
                         },
                         leading: Stack(
                           children: [

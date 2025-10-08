@@ -43,20 +43,21 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize local notifications (already done)
-  final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  final iosSettings = DarwinInitializationSettings();
-  var initSettings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
-
-  // Request iOS notification permissions
-  await FirebaseMessaging.instance.requestPermission(provisional: true);
-
   if (Platform.isAndroid) {
     //Currently i don't have apn for ios
+    // Initialize local notifications (already done)
+    final androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    final iosSettings = DarwinInitializationSettings();
+    var initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+    // Request iOS notification permissions
+    await FirebaseMessaging.instance.requestPermission(provisional: true);
     await FCMService.saveFCMToken();
     await FCMService.setupFCMListeners();
   }

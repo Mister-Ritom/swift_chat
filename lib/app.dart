@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:swift_chat/pages/auth/login_page.dart';
+import 'package:swift_chat/pages/desktop_home_page.dart';
 import 'package:swift_chat/providers/user_provider.dart';
 import 'package:swift_chat/pages/screns/home_page.dart';
 import 'package:swift_chat/pages/screns/discover_page.dart';
@@ -19,13 +20,48 @@ class App extends ConsumerWidget {
     final selectedIndex = ref.watch(_selectedIndexProvider);
 
     if (user == null) return const LoginPage();
-
     final pages = [
       const HomePage(),
       const DiscoverPage(),
       const NotificationsPage(),
       const MenuPage(),
     ];
+
+    final navIconList = [
+      _NavIcon(
+        icon: Icons.home_rounded,
+        index: 0,
+        selectedIndex: selectedIndex,
+        onTap: () => ref.read(_selectedIndexProvider.notifier).state = 0,
+      ),
+      _NavIcon(
+        icon: Icons.explore_rounded,
+        index: 1,
+        selectedIndex: selectedIndex,
+        onTap: () => ref.read(_selectedIndexProvider.notifier).state = 1,
+      ),
+      _NavIcon(
+        icon: Icons.notifications_rounded,
+        index: 2,
+        selectedIndex: selectedIndex,
+        onTap: () => ref.read(_selectedIndexProvider.notifier).state = 2,
+      ),
+      _NavIcon(
+        icon: Icons.menu_rounded,
+        index: 3,
+        selectedIndex: selectedIndex,
+        onTap: () => ref.read(_selectedIndexProvider.notifier).state = 3,
+      ),
+    ];
+
+    final size = MediaQuery.of(context).size;
+
+    if (size.width > size.height) {
+      return DesktopHomePage(
+        iconList: navIconList,
+        selectedPage: selectedIndex,
+      );
+    }
 
     return Scaffold(
       extendBody: true, // important for floating bar
@@ -74,40 +110,7 @@ class App extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavIcon(
-                    icon: Icons.home_rounded,
-                    index: 0,
-                    selectedIndex: selectedIndex,
-                    onTap:
-                        () =>
-                            ref.read(_selectedIndexProvider.notifier).state = 0,
-                  ),
-                  _NavIcon(
-                    icon: Icons.explore_rounded,
-                    index: 1,
-                    selectedIndex: selectedIndex,
-                    onTap:
-                        () =>
-                            ref.read(_selectedIndexProvider.notifier).state = 1,
-                  ),
-                  _NavIcon(
-                    icon: Icons.notifications_rounded,
-                    index: 2,
-                    selectedIndex: selectedIndex,
-                    onTap:
-                        () =>
-                            ref.read(_selectedIndexProvider.notifier).state = 2,
-                  ),
-                  _NavIcon(
-                    icon: Icons.menu_rounded,
-                    index: 3,
-                    selectedIndex: selectedIndex,
-                    onTap:
-                        () =>
-                            ref.read(_selectedIndexProvider.notifier).state = 3,
-                  ),
-                ],
+                children: navIconList,
               ),
             ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2, end: 0),
           ),

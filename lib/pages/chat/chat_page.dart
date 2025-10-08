@@ -20,7 +20,8 @@ import 'package:pocketbase/pocketbase.dart';
 
 class ChatPage extends StatefulWidget {
   final UserModel receiver;
-  const ChatPage({super.key, required this.receiver});
+  final bool isMobile;
+  const ChatPage({super.key, required this.receiver, this.isMobile = true});
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
@@ -161,17 +162,22 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildAppBar(BuildContext context) {
     final user = widget.receiver;
+    final isMobile = widget.isMobile;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 36, 8, 8),
-      color: isDark ? Colors.grey[850] : Colors.grey[200],
+      padding: EdgeInsets.fromLTRB(8, isMobile ? 36 : 8, 8, 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[850] : Colors.grey[200],
+        borderRadius: BorderRadius.circular(16), // <-- rounded corners
+      ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const FaIcon(FontAwesomeIcons.angleLeft, size: 32),
-          ),
+          isMobile
+              ? IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const FaIcon(FontAwesomeIcons.angleLeft, size: 32),
+              )
+              : SizedBox.shrink(),
           const SizedBox(width: 8),
           ProfilePicture(
             name: user.username,
@@ -205,7 +211,11 @@ class _ChatPageState extends State<ChatPage> {
                       ? SizedBox(
                         width: 160,
                         child: FittedBox(
-                          child: Text("Last seen ${timeAgo(date)}"),
+                          child: Text(
+                            "Last seen ${timeAgo(date)}",
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: Colors.grey),
+                          ),
                         ),
                       )
                       : const SizedBox.shrink();

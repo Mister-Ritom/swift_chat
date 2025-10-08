@@ -100,6 +100,7 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
   Future<void> changePassword() async {
     final newPasswordCtrl = TextEditingController();
     final confirmPasswordCtrl = TextEditingController();
+    final oldPasswordCtrl = TextEditingController();
 
     await showDialog(
       context: context,
@@ -109,6 +110,13 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                TextField(
+                  controller: oldPasswordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Current Password",
+                  ),
+                ),
                 TextField(
                   controller: newPasswordCtrl,
                   obscureText: true,
@@ -150,6 +158,7 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
                         .update(
                           _pb.authStore.record!.id,
                           body: {
+                            'oldPassword': oldPasswordCtrl.text,
                             'password': newPasswordCtrl.text,
                             'passwordConfirm': confirmPasswordCtrl.text,
                           },
