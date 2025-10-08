@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:http/http.dart' as http;
@@ -23,8 +24,8 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
   bool isEditing = false;
   late TextEditingController nameCtrl;
   late TextEditingController bioCtrl;
-  File? newAvatar;
-  File? newCover;
+  PickedFileData? newAvatar;
+  PickedFileData? newCover;
   bool isSaving = false;
   bool isPublic = false;
 
@@ -59,22 +60,43 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
 
       final files = <http.MultipartFile>[];
       if (newAvatar != null) {
-        files.add(
-          await http.MultipartFile.fromPath(
-            'avatar',
-            newAvatar!.path,
-            filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          ),
-        );
+        if (kIsWeb && newAvatar!.bytes != null) {
+          files.add(
+            http.MultipartFile.fromBytes(
+              'avatar',
+              newAvatar!.bytes!,
+              filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            ),
+          );
+        } else if (!kIsWeb && newAvatar!.path != null) {
+          files.add(
+            await http.MultipartFile.fromPath(
+              'avatar',
+              newAvatar!.path!,
+              filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            ),
+          );
+        }
       }
+
       if (newCover != null) {
-        files.add(
-          await http.MultipartFile.fromPath(
-            'cover',
-            newCover!.path,
-            filename: 'cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          ),
-        );
+        if (kIsWeb && newCover!.bytes != null) {
+          files.add(
+            http.MultipartFile.fromBytes(
+              'cover',
+              newCover!.bytes!,
+              filename: 'cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            ),
+          );
+        } else if (!kIsWeb && newCover!.path != null) {
+          files.add(
+            await http.MultipartFile.fromPath(
+              'cover',
+              newCover!.path!,
+              filename: 'cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            ),
+          );
+        }
       }
 
       final updated = await _pb
@@ -217,8 +239,9 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  _buildCoverImage(
-                    newCover?.path ?? user.coverUrl,
+                  buildCoverImage(
+                    newCover, // PickedFileData? from file picker
+                    user.coverUrl, // fallback network URL
                     size.width,
                     250,
                   ),
@@ -239,22 +262,22 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 3),
                             ),
-                            child: ClipOval(
-                              child:
-                                  newAvatar != null
-                                      ? Image.file(
-                                        newAvatar!,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      )
-                                      : ProfilePicture(
-                                        name: user.username,
-                                        radius: 50,
-                                        fontsize: 22,
-                                        img: user.avatarUrl,
+                            child:
+                                newAvatar != null
+                                    ? ClipOval(
+                                      child: buildCoverImage(
+                                        newAvatar,
+                                        null,
+                                        100,
+                                        100,
                                       ),
-                            ),
+                                    )
+                                    : ProfilePicture(
+                                      name: user.username,
+                                      radius: 50,
+                                      fontsize: 22,
+                                      img: user.avatarUrl,
+                                    ),
                           ),
                           if (isEditing)
                             Positioned(
@@ -489,8 +512,15 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
     );
   }
 
-  Widget _buildCoverImage(String? img, double width, double height) {
-    if (img == null || img.isEmpty) {
+  Widget buildCoverImage(
+    PickedFileData? file,
+    String? networkUrl,
+    double width,
+    double height,
+  ) {
+    // 1. No image: show placeholder
+    if ((file == null || (file.path == null && file.bytes == null)) &&
+        (networkUrl == null || networkUrl.isEmpty)) {
       return Container(
         width: width,
         height: height,
@@ -498,14 +528,36 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
         child: const Icon(Icons.image, size: 64, color: Colors.white70),
       );
     }
-    if (FileSystemEntity.typeSync(img) != FileSystemEntityType.notFound) {
-      return Image.file(
-        File(img),
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-      );
+
+    // 2. File selected
+    if (file != null) {
+      if (kIsWeb && file.bytes != null) {
+        // Web: use Image.memory
+        return Image.memory(
+          file.bytes!,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+        );
+      } else if (!kIsWeb &&
+          file.path != null &&
+          File(file.path!).existsSync()) {
+        // Mobile: use Image.file
+        return Image.file(
+          File(file.path!),
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+        );
+      }
     }
-    return Image.network(img, width: width, height: height, fit: BoxFit.cover);
+
+    // 3. Fallback: network image
+    return Image.network(
+      networkUrl!,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+    );
   }
 }

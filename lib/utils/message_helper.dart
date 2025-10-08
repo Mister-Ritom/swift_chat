@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:swift_chat/core/pb_client.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:swift_chat/utils/file_picker_helper.dart';
 
 class MessageHelper {
   static final _pb = PBClient.instance;
@@ -46,10 +48,11 @@ class MessageHelper {
     return chatRecord;
   }
 
+  /// Build a multipart request to send message + files
   static Future<MultipartRequest> buildMessageRequest(
     String text,
     String chatId,
-    List<File> files,
+    List<PickedFileData> files,
   ) async {
     final url = Uri.parse('${_pb.baseURL}/api/collections/messages/records');
     final request =
@@ -60,16 +63,31 @@ class MessageHelper {
           ..headers['Authorization'] = 'Bearer ${_pb.authStore.token}';
 
     for (final file in files) {
-      final length = await file.length();
-      final stream = ByteStream(file.openRead());
-      final multipartFile = MultipartFile(
-        'documents',
-        stream,
-        length,
-        filename: _getFileName(file.path),
-      );
-      request.files.add(multipartFile);
-      log('Added file: ${file.path}, size: $length bytes');
+      if (kIsWeb && file.bytes != null) {
+        // Web: use bytes directly
+        request.files.add(
+          MultipartFile.fromBytes(
+            'documents',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+        log(
+          'Added web file: ${file.name}, size: ${file.bytes!.lengthInBytes} bytes',
+        );
+      } else if (!kIsWeb && file.path != null) {
+        // Mobile: use File path
+        final length = await File(file.path!).length();
+        final stream = ByteStream(File(file.path!).openRead());
+        final multipartFile = MultipartFile(
+          'documents',
+          stream,
+          length,
+          filename: file.name,
+        );
+        request.files.add(multipartFile);
+        log('Added mobile file: ${file.path}, size: $length bytes');
+      }
     }
 
     return request;
