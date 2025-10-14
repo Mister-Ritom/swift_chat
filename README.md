@@ -82,8 +82,6 @@ Here’s a glimpse of **Swift Chat** in action 👇
   <img src="https://github.com/Mister-Ritom/swift_chat/raw/main/File%205.HEIC" width="32%" />
   <img src="https://github.com/Mister-Ritom/swift_chat/raw/main/File%206.png" width="32%" />
   <img src="https://github.com/Mister-Ritom/swift_chat/raw/main/File%207.png" width="32%" />
-  <img src="https://github.com/Mister-Ritom/swift_chat/raw/main/File%208.HEIC" width="32%" />
-  <img src="https://github.com/Mister-Ritom/swift_chat/raw/main/File%209.HEIC" width="32%" />
 </p>
 
 ---
